@@ -1,4 +1,5 @@
 ﻿@page "/orderDetails"
+@page "/orderDetails/{id}"
 @using Microsoft.AspNetCore.Authorization
 
 @attribute [Authorize]
@@ -12,7 +13,7 @@
 
 <p>@Mesage</p>
 
-@if ( Order is not null)
+@if (Order is not null)
 {
     <EditForm Model="@Order" OnValidSubmit="SaveOrder">
 
@@ -25,7 +26,7 @@
                         </div>
                         <div class="col-md-4 mb-3">
                             <input type="submit" class="btn btn-success" value="Save" />
-                            <input type="button" class="btn btn-secondary" value="Cancel" @onclick="Cancel"/>
+                            <input type="button" class="btn btn-secondary" value="Cancel" @onclick="Cancel" />
                         </div>
                         <div class="col-md-4 mb-3">
                         </div>
@@ -33,7 +34,7 @@
                     <div class="row">
                         <div class="col-md-6 mb-3">
                             <label>Number:</label>
-                            <InputNumber class="form-control" @bind-Value="@Order.OrderNumber"/>
+                            <InputNumber class="form-control" @bind-Value="@Order.OrderNumber" />
                         </div>
                         <div class="col-md-6 mb-3">
                             <label>Order Date:</label>
@@ -43,7 +44,7 @@
                     <div class="row">
                         <div class="col-md-12 mb-3">
                             <label>Client:</label>
-                            <InputSelect class="form-select" @bind-Value="@Order.ClientId" >
+                            <InputSelect class="form-select" @bind-Value="@Order.ClientId">
                                 @foreach (var item in clients)
                                 {
                                     <option value="@item.Id">@item.FirstName @item.LastName</option>
@@ -75,9 +76,9 @@
         </div>
 
 
-        @if(Order.Products is not null && Order.Products.Any())
+        @if (Order.Products is not null && Order.Products.Any())
         {
-            <MudTable Items="@Order.Products" Hover="true" Breakpoint="Breakpoint.Sm"> 
+            <MudTable Items="@Order.Products" Hover="true" Breakpoint="Breakpoint.Sm">
                 <ToolBarContent>
                     <MudText Typo="Typo.h6">Products</MudText>
                 </ToolBarContent>
@@ -90,7 +91,15 @@
                     <MudTd DataLabel="Name">@ProductContext.Name</MudTd>
                     <MudTd DataLabel="Price">@ProductContext.Price</MudTd>
                     <MudTd DataLabel="Quantity">@ProductContext.Quantity</MudTd>
-                    <MudTd DataLabel=""></MudTd>
+                    <MudTd DataLabel="">
+                        <MudFab OnClick="@(() => RemoveProduct(ProductContext.Id))"
+                                Color="Color.Secondary"
+                                Icon="@Icons.Material.Filled.Delete"
+                                Size="Size.Small"
+                                IconSize="Size.Small">
+
+                        </MudFab>
+                    </MudTd>
                 </RowTemplate>
             </MudTable>
         }
@@ -103,6 +112,9 @@ else
 }
 
 @code {
+    [Parameter]
+    public int Id { get; set; }
+
     public Order Order;
 
     public IEnumerable<Blazor.FurnitureStore.Shared.Client> clients;
@@ -113,13 +125,22 @@ else
     {
         try
         {
-            Order = new Order() 
-            { 
-                OrderNumber = await _orderService.GetNextNumber(),
-                ProductCategoryId = 1,
-                OrderDate = DateTime.Now,
-                DeliveryDate = DateTime.Today.AddDays(7)
-            };
+            if (Id > 0)
+            {
+                Order = await _orderService.GetDetails(Id);
+            }
+            else
+            {
+                Order = new Order()
+                    {
+                        OrderNumber = await _orderService.GetNextNumber(),
+                        ProductCategoryId = 1,
+                        OrderDate = DateTime.Now,
+                        DeliveryDate = DateTime.Today.AddDays(7)
+                    };
+
+            }
+
 
             await LoadClients();
         }
@@ -140,6 +161,7 @@ else
     protected async Task SaveOrder()
     {
         await _orderService.Save(Order);
+        NavigateHome();
     }
 
     private void NavigateHome()
@@ -166,5 +188,10 @@ else
 
             Order.Products.Add(product);
         }
+    }
+
+    protected void RemoveProduct(int productId)
+    {
+        Order.Products.RemoveAll(p => p.Id == productId);
     }
 }

@@ -1,0 +1,78 @@
+﻿@page "/"
+
+@inject IOrderService _orderService
+@inject NavigationManager _navigation
+
+<p>@Message</p>
+
+@if (Orders is not null && Orders.Any())
+{
+    <MudTable Items="@Orders" Hover="true" Breakpoint="Breakpoint.Sm">
+        <ToolBarContent>
+            <MudText Typo="Typo.h6">Orders</MudText>
+        </ToolBarContent>
+        <HeaderContent>
+            <MudTh>Number</MudTh>
+            <MudTh>Client</MudTh>
+            <MudTh>Total</MudTh>
+            <MudTh>Order Date</MudTh>
+            <MudTh>Delivery Date</MudTh>
+            <MudTh></MudTh>
+            <MudTh></MudTh>
+        </HeaderContent>
+        <RowTemplate Context="OrderContext">
+            <MudTd DataLabel="Number">@OrderContext.OrderNumber</MudTd>
+            <MudTd DataLabel="Client">@OrderContext.ClientName</MudTd>
+            <MudTd DataLabel="Total">@OrderContext.Total.ToString("C")</MudTd>
+            <MudTd DataLabel="Order Date">@OrderContext.OrderDate</MudTd>
+            <MudTd DataLabel="Delivery Date">@OrderContext.DeliveryDate</MudTd>
+            <MudTd DataLabel="">
+                <MudFab OnClick="@(() => Edit(OrderContext.Id))"
+                        Color="Color.Primary"
+                        Icon="@Icons.Material.Filled.Edit"
+                        Size="Size.Small"
+                        IconSize="Size.Small">
+
+                </MudFab>
+            </MudTd>
+            <MudTd DataLabel="">
+                <MudFab OnClick="@(() => Delete(OrderContext.Id))"
+                        Color="Color.Secondary"
+                        Icon="@Icons.Material.Filled.Delete"
+                        Size="Size.Small"
+                        IconSize="Size.Small">
+
+                </MudFab>
+            </MudTd>
+        </RowTemplate>
+    </MudTable>
+}
+
+@code {
+    public List<Order> Orders;
+    public string Message { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            Orders = (List<Order>)await _orderService.GetAllOrders();
+        }
+        catch (Exception ex)
+        {
+            Message = $"Ocurrio un error: {ex.Message}";
+            throw;
+        }
+    }
+
+    protected async Task Edit(int id)
+    {
+        _navigation.NavigateTo($"/orderdetails/{id}");
+    }
+
+    protected async Task Delete(int id)
+    {
+        await _orderService.DeleteOrder(id);
+        Orders.RemoveAll(o => o.Id == id);
+    }
+}

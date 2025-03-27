@@ -14,12 +14,45 @@ namespace Blazor.FurnitureStore.Repositories
             _connection = connection;
         }
 
-        public async Task<int> GetNextNumber()
+        public async Task<IEnumerable<Order>> GetAllOrders()
+        {
+
+            var sql = @$" SELECT o.[Id], [OrderNumber], [ClientId], [OrderDate], [DeliveryDate], [Total], c.LastName + ', ' + c.FirstName as ClientName
+                          FROM Orders o
+                          INNER JOIN Clients c on o.ClientId = c.Id ";
+
+            return await _connection.QueryAsync<Order>(sql, new { });
+        }
+
+        public async Task<Order> GetDetails(int id)
+        {
+
+            var sql = @$" SELECT [Id], [OrderNumber], [ClientId], [OrderDate], [DeliveryDate], [Total]
+                          FROM Orders 
+                          WHERE Id = @Id";
+
+            return await _connection.QueryFirstOrDefaultAsync<Order>(sql, new { Id = id });
+        }
+
+        public async Task<int> GetNextId()
         {
             var sql = @$" SELECT MAX(OrderNumber) + 1
                           FROM Orders ";
 
             return await _connection.QueryFirstAsync<int>(sql, new { });
+        }
+
+        public async Task<int> GetNextNumber()
+        {
+            var sql = @$" SELECT MAX(OrderNumber) + 1
+                          FROM Orders ";
+
+            var number = await _connection.QueryFirstAsync<int?>(sql, new { });
+
+            if (number is null)
+                number = 1;
+
+            return (int)number;
         }
 
         public async Task<bool> InsertOrder(Order order)
@@ -40,6 +73,31 @@ namespace Blazor.FurnitureStore.Repositories
                 });
 
             return result > 0;
+        }
+
+        public async Task<bool> UpdateOrder(Order order)
+        {
+            var sql = @$"
+                         UPDATE Orders SET ClientId = @ClientId, OrderDate = @OrderDate, DeliveryDate = @DeliveryDate
+                         WHERE Id = @Id";
+
+            var result = await _connection.ExecuteAsync(sql,
+                new
+                {
+                    order.ClientId,
+                    order.OrderDate,
+                    order.DeliveryDate,
+                    order.Id
+                });
+
+            return result > 0;
+        }
+
+        public async Task DeleteOrder(int id)
+        {
+            var sql = $"DELETE FROM Orders WHERE Id = @Id";
+
+            await _connection.ExecuteAsync(sql,new { Id = id });
         }
     }
 }
