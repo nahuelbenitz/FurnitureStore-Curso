@@ -1,0 +1,129 @@
+﻿@inject IProductCategoryService _productCategoryService
+@inject IProductService _productService
+@inject ISnackbar _snackbar
+
+<MudDialog>
+    <TitleContent>
+        Product Details
+    </TitleContent>
+    <DialogContent>
+        <EditForm Model="@Product">
+            <div class="card">
+                <div class="card-body">
+                    <div class="container">
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label>Category:</label>
+                                <InputSelect class="form-select"
+                                Value="@Product.ProductCategoryId"
+                                ValueChanged="((int productCategoryId) => ProductCategoryHasChanged(productCategoryId))"
+                                ValueExpression="@(() => Product.ProductCategoryId)">
+                                    @foreach (var item in productCategories)
+                                    {
+                                        <option value="@item.Id">@item.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label>Product:</label>
+                                <InputSelect class="form-select"
+                                Value="@Product.Id" 
+                                ValueChanged="((int productId) => GetDetails(productId))"
+                                ValueExpression="@(() => Product.Id)">
+                                    @foreach (var item in products)
+                                    {
+                                        <option value="@item.Id">@item.Name</option>
+                                    }
+                                </InputSelect>
+                            </div>
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <MudNumericField Disabled="true" Label="Price" Value="@Product.Price" Variant="Variant.Outlined" />
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <MudNumericField @bind-Value="@Product.Quantity" Variant="Variant.Outlined" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </EditForm>
+    </DialogContent>
+    <DialogActions>
+        <MudButton OnClick="Cancel">Cancel</MudButton>
+        <MudButton Color="Color.Primary" OnClick="AddProduct">Add</MudButton>
+    </DialogActions>
+</MudDialog>
+
+
+@code {
+    public Product Product = new Product();
+    public IEnumerable<ProductCategory> productCategories = new List<ProductCategory>();
+    public IEnumerable<Product> products = new List<Product>();
+    public string Message { get; set; }
+
+    [CascadingParameter]
+    MudDialogInstance MudDialog { get; set; }
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            productCategories = await _productCategoryService.GetProductCategories();
+
+            if(productCategories is not null && productCategories.Any())
+            {
+                Product.ProductCategoryId = productCategories.FirstOrDefault()!.Id;
+            }
+
+            await LoadProducts(Product.ProductCategoryId);
+        }
+        catch (Exception ex)
+        {
+            Message = $"Ocurrio un error: {ex.Message}";
+            throw;
+        }
+
+    }
+
+    protected async Task ProductCategoryHasChanged(int productCategoryId)
+    {
+        Product.ProductCategoryId = productCategoryId;
+
+        if (Product.ProductCategoryId > 0)
+            await LoadProducts(Product.ProductCategoryId);
+    }
+
+    private async Task LoadProducts(int productCategoryId)
+    {
+        products = await _productService.GetByCategory(productCategoryId);
+        if (products is not null && products.Any())
+            Product = await _productService.GetDetails(products.FirstOrDefault()!.Id);
+    }
+
+    private void Cancel()
+    {
+        MudDialog.Cancel();
+    }
+
+    private void AddProduct()
+    {
+        _snackbar.Add("Producto agregado", Severity.Success, a => a.VisibleStateDuration = 200);
+        MudDialog.Close(DialogResult.Ok(Product));
+    }
+
+    protected async Task GetDetails(int id)
+    {
+        Product.Id = id;
+
+        if (Product.Id > 0)
+            await GetById(Product.Id);
+    }
+
+    private async Task GetById(int id)
+    {
+        Product = await _productService.GetDetails(id);
+
+    }
+}
